@@ -1,3 +1,59 @@
 #####SWD Challenge - Small Multiples#####
 library(tidyverse)
-#Data pull from github
+library(readr)
+library(dplyr)
+library(purrr)
+
+#initial data load and union
+files <- dir(pattern = "*with_ann.csv")
+
+bp_data <- files %>% 
+  map(function(file_name){
+    assign(x = str_remove(file_name,"_00CZ2_with_ann.csv"),
+         value = read_csv(paste0(file_name),skip =1),
+         envir = .GlobalEnv)}) %>% 
+  reduce(rbind) %>%
+  select(-Id2,
+         -`Employment size of establishment`, 
+         -`Geographic identifier code`,
+         -`2012 NAICS code`) %>%
+  rename(area_name = `Geographic area name`,
+         naics_code = `Meaning of 2012 NAICS code`,
+         size = `Meaning of Employment size of establishment`,
+         establishments = `Number of establishments`)
+
+bp_data2 <- bp_data %>% 
+  separate(area_name, into = c("zip", "zip_code", "city"),sep = '\\s')
+  
+bp_data2$city <- str_remove_all(bp_data2$city,"[(,]")
+
+bp_data3 <- bp_data2 %>% 
+  select(-zip) %>%
+  filter(naics_code == "Total for all sectors")
+
+bp_data3$size <- str_replace_all(bp_data3$size,
+                             c("All establishments" = "total",
+                               "Establishments with 1 to 4 employees" = "< 4",
+                               "Establishments with 5 to 9 employees" ="5-9",
+                               "Establishments with 10 to 19 employees" = "10-19",
+                               "Establishments with 20 to 49 employees" = "20-49",
+                               "Establishments with 50 to 99 employees"= "50-99",
+                               "Establishments with 100 to 249 employees" = "100-249",
+                               "Establishments with 250 to 499 employees" = "250-499",
+                               "Establishments with 500 to 999 employees" = "500-999",
+                               "Establishments with 1,000 employees or more" = "1,000+"))
+                          
+#Explore total establishments for STL by employment size
+stl_total <- bp_data3 %>% 
+  group_by(zip_code,Year,size) %>%
+  summarize(total_est = sum(establishments))
+
+#lattice scatterplots for size vs. establishments by zip by year
+stl_chart <- stl_total %>%
+  ggplot(aes(size,total_est,colour = zip_code)) + 
+  geom_point() + 
+  facet_grid(~Year) + 
+  theme_minimal() +
+  labs(x= "Number of Employees", y = "Number of Companies",
+       title = "St. Louis, MO Industry Growth")
+stl_chart
