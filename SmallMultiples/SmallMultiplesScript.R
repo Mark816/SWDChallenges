@@ -28,13 +28,6 @@ bp_data2 <- bp_data %>%
 bp_data2$city <- str_remove_all(bp_data2$city,"[(,]")
 bp_data2$zip_code <- as.integer(bp_data2$zip_code)
 
-#zip code list to combine with payroll data
-zip_code <- bp_data2 %>%
-  select(zip_code) %>%
-  unique() %>%
-  mutate(stl = "stl")
-
-#continue as normal from above
 bp_data3 <- bp_data2 %>% 
   select(-zip) %>%
   filter(naics_code == "Total for all sectors")
@@ -65,6 +58,12 @@ stl_chart <- stl_total %>%
   labs(x= "Number of Employees", y = "Number of Companies",
        title = "St. Louis, MO Industry Growth")
 stl_chart
+
+#zip code list to combine with payroll data
+zip_code <- bp_data2 %>%
+  select(zip_code) %>%
+  unique() %>%
+  mutate(stl = "stl")
 
 #load payroll data
 payfiles <- dir(pattern = "*Z1_with_ann.csv")
