@@ -68,10 +68,12 @@ zip_code <- bp_data2 %>%
 #load payroll data
 payfiles <- dir(pattern = "*Z1_with_ann.csv")
 
+col_names <- names(read_csv("BP_2016_00CZ1_with_ann.csv",skip = 1, n_max = 0))
+
 bp_paydata <- payfiles %>% 
   map(function(file_name2){
-    assign(x = str_remove(file_name2,"_00CZ1_with_ann.csv"),
-           value = read_csv(paste0(file_name2),skip =1),
+    assign(x = str_c("PR","_",str_remove(file_name2,"_00CZ1_with_ann.csv")),
+           value = read_csv(paste0(file_name2),col_names = col_names, skip =2 ),
            envir = .GlobalEnv)}) %>% 
   reduce(rbind) %>%
   select(-Id2,
