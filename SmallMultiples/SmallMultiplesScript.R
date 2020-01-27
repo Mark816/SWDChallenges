@@ -87,13 +87,14 @@ bp_paydata <- payfiles %>%
 bp_paydata2 <- bp_paydata %>% 
   separate(area_name, into = c("zip", "zip_code","city"),sep = '\\s', extra = "merge")
 
-bp_paydata2$city <- str_remove_all(bp_paydata2$city, "[(,)]")
-
 bp_paydata3 <- bp_paydata2 %>%
-  separate(city, into = c("city","state"), sep = '\\s', extra = "drop")
+  separate(city, into = c("city","state"), sep = ',', extra = "drop")
+
+bp_paydata3$city <- str_remove_all(bp_paydata3$city, "[(,)]")
 
 bp_paydata3$employees <- as.integer(bp_paydata3$employees)
 bp_paydata3$zip_code <- as.integer(bp_paydata3$zip_code)
+                                                   
 bp_paydata4 <- bp_paydata3 %>% 
   select(-zip,
          -state) %>%
@@ -105,18 +106,41 @@ stl_data <- left_join(bp_paydata4,zip_code) %>%
          employees > 0)
 
 bp_paydata5 <- stl_data %>%
+  filter(Year > 2008) %>%
   group_by(Year,city) %>%
   summarize(employees = sum(as.integer(employees)), 
             annual_payroll = sum(as.integer(`Annual payroll ($1,000)`)), 
-            establishments = sum(as.integer(establishments)))
+            establishments = sum(as.integer(establishments)),
+            avg_employee_pay = as.integer(
+              (sum(as.integer(`Annual payroll ($1,000)`))/
+                 sum(as.integer(employees)))))
 
 #chart for new data 
-stl_chart2 <- bp_paydata5 %>%
-  ggplot(aes(employees,annual_payroll,colour = city)) + 
-  geom_point() + 
-  facet_grid(~Year) + 
-  theme_minimal() +
-  labs(x= "Number of Employees", y = "Annual Payroll",
-       title = "St. Louis, MO Industry Growth") +
-  theme(legend.position = "none")
-stl_chart2
+#install.packages("ggthemes")
+#install.packages("gghighlight")
+library(ggthemes)
+library(gghighlight)
+stlchart3 <- bp_paydata5 %>%
+  ggplot(aes(Year,avg_employee_pay)) + 
+  geom_line(aes(Year, avg_employee_pay,color = city),color = "blue", size = 1, na.rm = TRUE) + 
+  gghighlight(use_direct_label = FALSE, unhighlighted_params = list(size = 0.5, color = "gray87")) +
+  facet_wrap(~ city, ncol = 9) + 
+  labs(x= "Year", y = "Avg. Annual Salary ($1,000)",
+       title = "St. Louis, MO Salary Growth", 
+       subtitle = "SWD Challenge - Small Multiples",
+       caption = "based on data from US Census Bureau") +
+  theme(plot.title = element_text(hjust = 0.5,face = "bold", size = 16),
+        plot.subtitle = element_text(hjust = 0.5, size = 11, color = "slategrey"),
+        legend.position = "none", 
+        axis.text.x = element_text(size = 8,angle = 35,vjust = 0.5),
+        axis.title.x = element_text(size = 11, face = "bold",hjust = 0.5, vjust = 0.75),
+        axis.title.y = element_text(size = 11, face = "bold",hjust = 0.5, vjust = 0.75),
+        strip.background = element_rect(fill = "white", linetype = NULL),
+        strip.text = element_text(size = 11,color = "slategrey", face = "bold"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid.major = element_line(size = 0.25, linetype = 'solid',
+                                        colour = "slategrey"), 
+        panel.grid.minor = element_line(size = 0.25, linetype = 'solid',
+                                        colour = "slategrey"))
+
+stlchart3
